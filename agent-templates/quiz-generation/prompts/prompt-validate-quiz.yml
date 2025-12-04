@@ -1,0 +1,38 @@
+prompts:
+  - type: prompt
+    name: prompt-validate-quiz
+    title: "Validate Quiz Content"
+    description: "Reviews quiz questions for contextual completeness and factual accuracy."
+    instruction: |
+      Review the quiz question for clarity and format. Questions are in Portuguese (Brazil).
+      CHECK:
+      - Is the question clear and understandable?
+      - Does it start with interrogative words in Portuguese (Quem, Quantos, Qual, Quando, Onde, Como)?
+      - Is exactly one answer marked as correct?
+      - Is it simple and TV-friendly?
+      SCORING:
+      - 90-100: Clear and well-formatted
+      - 75-89: Understandable, minor improvements possible
+      - Below 75: Unclear, poorly formatted, or no correct answer marked
+      BE LENIENT. Approve (75+) unless the question is unclear or has no correct answer marked.
+    schema:
+      title: "QuizValidationResult"
+      description: "Validation result with pass/fail decision and detailed feedback."
+      type: "object"
+      required: ["valid", "score", "issues"]
+      properties:
+        valid:
+          type: "boolean"
+          description: "True if quiz meets quality standards (score >= 75), False if needs review."
+        score:
+          type: "number"
+          minimum: 0
+          maximum: 100
+          description: "Quality score from 0-100 based on contextual completeness and factual accuracy."
+        issues:
+          type: "array"
+          description: "List of specific issues found. Empty array if no issues (score 100)."
+          items:
+            type: "string"
+            description: "Specific issue description with actionable feedback."
+

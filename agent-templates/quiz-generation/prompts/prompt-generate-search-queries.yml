@@ -1,0 +1,42 @@
+prompts:
+  - type: prompt
+    name: prompt-generate-search-queries
+    title: "Generate Search Queries for Brazilian Football"
+    description: "Generates search queries about Brazilian football to gather information for quiz generation."
+    instruction: |
+      OBJECTIVE: Generate relevant search queries about Brazilian football (historical and general facts, championships, players, records, statistics) that will be used to gather factual information for creating simple quiz questions.
+      
+      REQUIREMENTS:
+      - Focus on Brazilian football (Brasileirão, Série A, Série B, state championships, Copa do Brasil, Libertadores, Seleção Brasileira)
+      - Generate queries about BOTH historical facts AND recent information
+      - Include general historical queries about past champions, finals, player records, statistics
+      - Queries should be specific and factual (not predictions or opinions)
+      - Generate 5-10 diverse queries covering different aspects (historical champions, finals, player records, team statistics, competitions)
+      - Use Portuguese or English keywords that will yield good search results
+      - Focus on information that can be used to create simple, factual quiz questions
+      
+      EXAMPLES OF GOOD QUERIES:
+      - "campeão brasileiro 1998"
+      - "numero de gols Romário seleção brasileira"
+      - "final taça rio 2005"
+      - "Brasileirão 2024 top scorers"
+      - "Flamengo vs Palmeiras recent matches"
+      - "Brazilian football records history"
+      - "Série A champions list"
+      - "Copa do Brasil winners history"
+      - "artilheiros brasileirão histórico"
+      - "seleção brasileira gols por jogador"
+    schema:
+      title: "SearchQueries"
+      description: "Array of search query strings for Brazilian football information."
+      type: "object"
+      properties:
+        search_queries:
+          type: "array"
+          minItems: 5
+          maxItems: 10
+          description: "Array of search query strings about Brazilian football."
+          items:
+            type: "string"
+            description: "A search query string about Brazilian football."
+

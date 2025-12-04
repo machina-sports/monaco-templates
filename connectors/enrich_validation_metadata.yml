@@ -1,0 +1,9 @@
+connector:
+  name: enrich-validation-metadata
+  description: Enrich Validation Metadata
+  filename: enrich_validation_metadata.py
+  filetype: pyscript
+  commands:
+    - name: Invoke Enrich Validation Metadata
+      value: invoke_enrich_validation_metadata
+

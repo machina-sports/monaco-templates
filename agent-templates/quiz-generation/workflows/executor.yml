@@ -1,0 +1,152 @@
+workflow:
+
+  name: generate-custom-quizzes-executor
+  title: Generate Custom Quizzes
+  description: Generate Custom Quizzes
+  context-variables:
+    debugger:
+      enabled: true
+    google-genai:
+      credential: $TEMP_CONTEXT_VARIABLE_VERTEX_AI_CREDENTIAL
+      project_id: $TEMP_CONTEXT_VARIABLE_VERTEX_AI_PROJECT_ID
+      api_key: $TEMP_CONTEXT_VARIABLE_GOOGLE_GENERATIVE_AI_API_KEY
+    machina-ai:
+      api_key: $TEMP_CONTEXT_VARIABLE_SDK_OPENAI_API_KEY
+  inputs:
+    custom-context: $.get('custom_context') or None
+    custom-documents: $.get('custom-documents', [])
+    custom-instruction: $.get('custom_instruction') or None
+    last_messages: $.get('last_messages')
+    match_context: $.get('match_context', 'disabled')
+    websearch_insights: $.get('websearch_insights', [])
+  outputs:
+    generated-questions: $.get('generated-questions', [])
+    validation-results: $.get('validation-results', [])
+    enriched_questions: $.get('enriched_questions', [])
+    workflow-status: "$.get('workflow-status')"
+  tasks:
+
+    # prompt-generate-search-queries
+    - type: prompt
+      name: prompt-generate-search-queries
+      prompt_file: ../prompts/prompt-generate-search-queries.yml
+      connector:
+        command: invoke_prompt
+        name: google-genai
+        model: gemini-2.5-flash
+        location: global
+        provider: vertex_ai
+      inputs:
+        _1_custom-context: $.get('custom-context', {})
+        _2_custom-instruction: $.get('custom-instruction')
+      outputs:
+        search_queries: $.get('search_queries', [])
+
+    # search-google
+    - type: connector
+      name: search-google
+      description: Search the Google Gemini using Google Search grounding.
+      condition: "$.get('search_queries') is not None and len($.get('search_queries', [])) > 0"
+      connector:
+        name: google-genai
+        command: invoke_search
+        model: gemini-3-pro-preview
+      foreach:
+        concurrent: true
+        name: search_query
+        expr: $
+        value: $.get('search_queries')
+      inputs:
+        location: $.get('location', 'global')
+        search_query: $.get('search_query', '')
+      outputs:
+        search_response: |
+          [
+            $.get('answer', '')
+          ]
+
+    # prompt-generate-custom-quizzes
+    - type: prompt
+      name: prompt-generate-custom-quizzes
+      prompt_file: ../prompts/prompt-generate-custom-quizzes.yml
+      condition: "$.get('search_response') is not None and len($.get('search_response', [])) > 0"
+      connector:
+        command: invoke_prompt
+        name: google-genai
+        model: gemini-2.5-flash
+        location: global
+        provider: vertex_ai
+      inputs:
+        _1_search_responses: $.get('search_response', [])
+        _2_custom-instruction: $.get('custom-instruction')
+      outputs:
+        generated-questions: $.get('questions', [])
+
+    # prompt-validate-quiz
+    - type: prompt
+      name: prompt-validate-quiz
+      prompt_file: ../prompts/prompt-validate-quiz.yml
+      description: Validate quiz questions for quality and contextual completeness
+      condition: "len($.get('generated-questions', [])) > 0"
+      connector:
+        command: invoke_prompt
+        name: google-genai
+        model: gemini-2.5-pro
+        location: global
+        provider: vertex_ai
+      foreach:
+        concurrent: true
+        name: quiz-question
+        expr: $
+        value: $.get('generated-questions', [])
+      inputs:
+        _1_quiz-question: $.get('quiz-question')
+        _2_original-context: $.get('custom-context', {})
+      outputs:
+        validation-results: |
+          [
+            {
+              "valid": $.get('valid', False),
+              "score": $.get('score', 0),
+              "issues": $.get('issues', [])
+            }
+          ]
+
+    # enrich-validation-metadata
+    - type: connector
+      name: enrich-validation-metadata
+      description: Enrich questions with validation metadata
+      condition: "len($.get('generated-questions', [])) > 0 and len($.get('validation-results', [])) > 0"
+      connector:
+        name: enrich-validation-metadata
+        command: invoke_enrich_validation_metadata
+      inputs:
+        questions: $.get('generated-questions', [])
+        validation_results: $.get('validation-results', [])
+      outputs:
+        enriched_questions: $.get('enriched_questions', [])
+
+    # bulk-content-custom-quizzes
+    - type: document
+      name: bulk-content-custom-quizzes
+      description: Bulk save the quizzes.
+      condition: "len($.get('enriched_questions', [])) > 0"
+      config:
+        action: bulk-save
+        embed-vector: false
+      document_name: "'content-quiz'"
+      documents:
+        items: $.get('parsed_quizzes', [])
+      inputs:
+        parsed_quizzes: |
+          [
+            {
+              **c,
+              "metadata": {
+                "event_code": "$.(event_code)"
+              }
+            }
+            for c in $.get('enriched_questions', [])
+          ]
+      outputs:
+        workflow-status: "'executed'"

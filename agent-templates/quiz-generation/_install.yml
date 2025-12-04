@@ -1,0 +1,41 @@
+setup:
+  title: Generate Custom Quizzes
+  description: AI-powered assistant to generate custom quizzes for TV based on Brazilian football data.
+  category:
+    - special-templates
+  estimatedTime: 15 minutes
+  features:
+    - AI Agent to generate custom quiz questions for TV
+    - Google Search integration for Brazilian football information
+    - Quiz validation and enrichment
+  status: available
+  integrations:
+    - machina-ai
+    - google-genai
+  value: agent-templates/quiz-generation
+  version: 1.0.0
+
+datasets:
+
+  # COVERAGE CUSTOM QUIZZES
+
+  # prompts
+
+  - type: prompts
+    path: prompts/prompt-generate-search-queries.yml
+
+  - type: prompts
+    path: prompts/prompt-generate-custom-quizzes.yml
+
+  - type: prompts
+    path: prompts/prompt-validate-quiz.yml
+
+  # workflows
+
+  - type: workflow
+    path: workflows/executor.yml
+  
+  # connectors
+
+  - type: connector
+    path: ../../connectors/enrich_validation_metadata.yml
